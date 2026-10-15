@@ -17,10 +17,15 @@ use MonsieurBiz\SyliusCmsPagePlugin\Repository\PageRepositoryInterface;
 use Sylius\Component\Channel\Context\ChannelContextInterface;
 use Sylius\Component\Channel\Context\ChannelNotFoundException;
 use Sylius\Component\Locale\Context\LocaleContextInterface;
+use Sylius\Resource\Translation\Provider\TranslationLocaleProviderInterface;
 use Symfony\Bundle\FrameworkBundle\Routing\Attribute\AsRoutingConditionService;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * A page without a translation in the request locale also matches by its slug in the default translation locale,
+ * so it renders with the fallback content instead of answering 404.
+ */
 #[AsRoutingConditionService(alias: 'monsieurbiz.cms_page.route_checker')]
 final class PageSlugConditionChecker
 {
@@ -29,6 +34,7 @@ final class PageSlugConditionChecker
         private ChannelContextInterface $channelContext,
         private LocaleContextInterface $localeContext,
         private ClockInterface $clock,
+        private TranslationLocaleProviderInterface $translationLocaleProvider,
     ) {
     }
 
@@ -44,7 +50,8 @@ final class PageSlugConditionChecker
                 $this->channelContext->getChannel(),
                 $this->localeContext->getLocaleCode(),
                 $slug,
-                $this->clock->now()
+                $this->clock->now(),
+                $this->translationLocaleProvider->getDefaultLocaleCode()
             );
         } catch (ChannelNotFoundException $channelNotFoundException) {
             return false;

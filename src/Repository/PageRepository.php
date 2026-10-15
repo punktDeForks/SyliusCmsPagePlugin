@@ -84,7 +84,51 @@ class PageRepository extends EntityRepository implements PageRepositoryInterface
         ;
     }
 
-    public function existsOneEnabledAndPublishedByChannelAndSlug(ChannelInterface $channel, ?string $locale, string $slug, DateTimeInterface $dateTime): bool
+    public function existsOneEnabledAndPublishedByChannelAndSlug(ChannelInterface $channel, ?string $locale, string $slug, DateTimeInterface $dateTime, ?string $fallbackLocaleCode = null): bool
+    {
+        if ($this->countEnabledAndPublishedByChannelAndSlug($channel, $locale, $slug, $dateTime) > 0) {
+            return true;
+        }
+
+        return $this->usesFallbackLocale($locale, $fallbackLocaleCode)
+            && $this->countEnabledAndPublishedByChannelAndSlug($channel, $fallbackLocaleCode, $slug, $dateTime) > 0;
+    }
+
+    /**
+     * @throws NonUniqueResultException
+     */
+    public function findOneEnabledAndPublishedBySlugAndChannelCode(string $slug, string $localeCode, string $channelCode, DateTimeInterface $dateTime, ?string $fallbackLocaleCode = null): ?PageInterface
+    {
+        $page = $this->findOneEnabledAndPublishedBySlugAndChannelCodeInLocale($slug, $localeCode, $channelCode, $dateTime);
+        if (null !== $page || !$this->usesFallbackLocale($localeCode, $fallbackLocaleCode)) {
+            return $page;
+        }
+
+        return $this->findOneEnabledAndPublishedBySlugAndChannelCodeInLocale($slug, $fallbackLocaleCode, $channelCode, $dateTime);
+    }
+
+    /**
+     * @throws NonUniqueResultException
+     */
+    public function findOneEnabledAndPublishedByPageCodeAndChannelCode(string $code, string $locale, ChannelInterface $channel, DateTimeInterface $dateTime, ?string $fallbackLocaleCode = null): ?PageInterface
+    {
+        $page = $this->findOneEnabledAndPublishedByPageCodeAndChannelCodeInLocale($code, $locale, $channel, $dateTime);
+        if (null !== $page || !$this->usesFallbackLocale($locale, $fallbackLocaleCode)) {
+            return $page;
+        }
+
+        return $this->findOneEnabledAndPublishedByPageCodeAndChannelCodeInLocale($code, $fallbackLocaleCode, $channel, $dateTime);
+    }
+
+    /**
+     * @phpstan-assert-if-true !null $fallbackLocaleCode
+     */
+    private function usesFallbackLocale(?string $localeCode, ?string $fallbackLocaleCode): bool
+    {
+        return null !== $fallbackLocaleCode && $fallbackLocaleCode !== $localeCode;
+    }
+
+    private function countEnabledAndPublishedByChannelAndSlug(ChannelInterface $channel, ?string $locale, string $slug, DateTimeInterface $dateTime): int
     {
         $queryBuilder = $this->createQueryBuilderExistOne($channel, $locale, $slug);
         $queryBuilder
@@ -94,18 +138,16 @@ class PageRepository extends EntityRepository implements PageRepositoryInterface
             ->setParameter('now', $dateTime)
         ;
 
-        $count = (int) $queryBuilder
+        return (int) $queryBuilder
             ->getQuery()
             ->getSingleScalarResult()
         ;
-
-        return $count > 0;
     }
 
     /**
      * @throws NonUniqueResultException
      */
-    public function findOneEnabledAndPublishedBySlugAndChannelCode(string $slug, string $localeCode, string $channelCode, DateTimeInterface $dateTime): ?PageInterface
+    private function findOneEnabledAndPublishedBySlugAndChannelCodeInLocale(string $slug, string $localeCode, string $channelCode, DateTimeInterface $dateTime): ?PageInterface
     {
         return $this->createQueryBuilder('p')
             ->leftJoin('p.translations', 'translation')
@@ -128,7 +170,7 @@ class PageRepository extends EntityRepository implements PageRepositoryInterface
     /**
      * @throws NonUniqueResultException
      */
-    public function findOneEnabledAndPublishedByPageCodeAndChannelCode(string $code, string $locale, ChannelInterface $channel, DateTimeInterface $dateTime): ?PageInterface
+    private function findOneEnabledAndPublishedByPageCodeAndChannelCodeInLocale(string $code, string $locale, ChannelInterface $channel, DateTimeInterface $dateTime): ?PageInterface
     {
         return $this->createQueryBuilder('p')
             ->innerJoin('p.translations', 'translation', 'WITH', 'translation.locale = :locale')

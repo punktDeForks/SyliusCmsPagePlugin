@@ -31,9 +31,19 @@ interface PageRepositoryInterface extends RepositoryInterface
     /** @deprecated Use findOneEnabledAndPublishedBySlugAndChannelCode */
     public function findOneEnabledBySlugAndChannelCode(string $slug, string $localeCode, string $channelCode): ?PageInterface;
 
-    public function existsOneEnabledAndPublishedByChannelAndSlug(ChannelInterface $channel, ?string $locale, string $slug, DateTimeInterface $dateTime): bool;
+    /**
+     * With a $fallbackLocaleCode, a page without a translation in $locale also matches by its slug in the fallback locale.
+     */
+    public function existsOneEnabledAndPublishedByChannelAndSlug(ChannelInterface $channel, ?string $locale, string $slug, DateTimeInterface $dateTime, ?string $fallbackLocaleCode = null): bool;
 
-    public function findOneEnabledAndPublishedBySlugAndChannelCode(string $slug, string $localeCode, string $channelCode, DateTimeInterface $dateTime): ?PageInterface;
+    /**
+     * With a $fallbackLocaleCode, a page without a translation in $localeCode is resolved by its slug in the fallback
+     * locale; its content then renders through the translatable fallback locale.
+     */
+    public function findOneEnabledAndPublishedBySlugAndChannelCode(string $slug, string $localeCode, string $channelCode, DateTimeInterface $dateTime, ?string $fallbackLocaleCode = null): ?PageInterface;
 
-    public function findOneEnabledAndPublishedByPageCodeAndChannelCode(string $code, string $localeCode, ChannelInterface $channel, DateTimeInterface $dateTime): ?PageInterface;
+    /**
+     * With a $fallbackLocaleCode, a page without a translation in $localeCode is resolved by its fallback locale translation.
+     */
+    public function findOneEnabledAndPublishedByPageCodeAndChannelCode(string $code, string $localeCode, ChannelInterface $channel, DateTimeInterface $dateTime, ?string $fallbackLocaleCode = null): ?PageInterface;
 }
