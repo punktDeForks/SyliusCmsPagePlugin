@@ -6,6 +6,7 @@ use MonsieurBiz\SyliusCmsPagePlugin\Entity\PageInterface;
 use MonsieurBiz\SyliusCmsPagePlugin\Repository\PageRepositoryInterface;
 use Sylius\Component\Channel\Context\ChannelContextInterface;
 use Sylius\Component\Locale\Context\LocaleContextInterface;
+use Sylius\Resource\Translation\Provider\TranslationLocaleProviderInterface;
 use Sylius\TwigHooks\Twig\Component\HookableComponentTrait;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
@@ -25,6 +26,7 @@ final class PageLink
         protected ChannelContextInterface $channelContext,
         protected PageRepositoryInterface $pageRepository,
         protected UrlGeneratorInterface $urlGenerator,
+        protected TranslationLocaleProviderInterface $translationLocaleProvider,
     ) {
     }
 
@@ -56,6 +58,10 @@ final class PageLink
         return $page->getTitle();
     }
 
+    /**
+     * A page without a translation in the current locale falls back to the default translation locale; its slug and
+     * title then come from that translation and the link keeps the current locale prefix.
+     */
     private function getPage(): ?PageInterface
     {
         $currentLocaleCode = $this->localeContext->getLocaleCode();
@@ -65,7 +71,8 @@ final class PageLink
             $this->pageCode,
             $currentLocaleCode,
             $channel,
-            $now
+            $now,
+            $this->translationLocaleProvider->getDefaultLocaleCode()
         );
     }
 }
